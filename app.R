@@ -27,24 +27,27 @@ ui <- fluidPage(
                  plotlyOutput("gencomp")),
         tabPanel("Races",
                  div(style = "margin-top: 1rem;",
-          
+                     
                      fluidRow(
                        column(width = 3,
                               selectInput("track",
-                                          "Track:",
+                                          "Grand Prix",
                                           choices = NULL)),
                        column(width = 6,
                               selectInput("var",
-                                          "Parameter:",
-                                          choices = NULL))
-                     ))
+                                          "Parameter",
+                                          choices = c("Position", "Lap Time"),
+                                          selected = "Position"))
+                     ), 
+                     plotlyOutput("trackChart", height = "70rem")
+                 )
         ),
         tabPanel("Season standings",
-                 selectInput("season_stats",
-                             "Season standings:",
-                             choices = c("Position", "Points")),
                  div(
                    style = "margin-top: 1rem;",
+                   selectInput("season_stats",
+                               "Season standings:",
+                               choices = c("Position", "Points")),
                    plotlyOutput("lineChart", height = "70rem")
                  )
         )
@@ -58,13 +61,24 @@ server <- function(input, output, session) {
   pilots_ds <- readr::read_csv("data/drivers.csv")
   results_ds <- readr::read_csv("data/results.csv")
   races_ds <- readr::read_csv("data/races.csv")
+  laps_ds <- readr::read_csv("data/lap_times.csv")
   
-  seasons_distinct <- distinct(seasons_ds, year) %>%
-    arrange(desc(year)) %>%
-    slice(-1)
   
-  observe({
+  
+  observe({  
+    seasons_distinct <- distinct(seasons_ds, year) %>%
+      arrange(desc(year)) %>%
+      slice(-1)
+    
     updateSelectInput(session, "season", choices = seasons_distinct$year)
+    
+    season_races <- races %>% 
+      filter(year == input$season) %>% 
+      arrange(round) %>% 
+      select(name) %>% 
+      distinct()
+    
+    updateSelectInput(session, "track", choices = season_races$name)
   })
   
   observeEvent(input$season, {
@@ -98,36 +112,74 @@ server <- function(input, output, session) {
       arrange(date) %>%
       filter(fullname == input$pilot1 | fullname == input$pilot2 )
     
-      if(input$season_stats=="Position") {
-        season_results <-  season_results %>% select(name, fullname, position) %>%
+    if(input$season_stats=="Position") {
+      season_results <-  season_results %>% select(name, fullname, position) %>%
         mutate(position = ifelse(position == "\\N", "DNF", position)) %>%
         mutate(position = factor(position, levels = c(as.character(1:20), "DNF"))) %>% 
         mutate(name = factor(name, levels = unique(name)))
-        
       
-        chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter", mode = "lines", 
+      
+      chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter", mode = "lines", 
                        line = list(width = 3)) %>%
         layout(title = paste(input$season, "Pilot Positions"),
                xaxis = list(title = ""),
                yaxis = list(title = "", autorange = "reversed"))
-      }
-      else {
-        season_results <-  season_results %>%  select(name, fullname, points) %>%
-          mutate(name = factor(name, levels = unique(name))) %>% 
-          group_by(fullname) %>%
-          mutate(points = cumsum(points)) 
-        
-        chart <- plot_ly(season_results, x = ~name, y = ~points, color = ~fullname, type = "scatter", mode = "lines", 
-                         line = list(width = 3)) %>%
-          layout(title = paste(input$season, "Pilot Standings"),
-                 xaxis = list(title = ""),
-                 yaxis = list(title = ""))
-      }
-
+    }
+    else {
+      season_results <-  season_results %>%  select(name, fullname, points) %>%
+        mutate(name = factor(name, levels = unique(name))) %>% 
+        group_by(fullname) %>%
+        mutate(points = cumsum(points)) 
+      
+      chart <- plot_ly(season_results, x = ~name, y = ~points, color = ~fullname, type = "scatter", mode = "lines", 
+                       line = list(width = 3)) %>%
+        layout(title = paste(input$season, "Pilot Standings"),
+               xaxis = list(title = ""),
+               yaxis = list(title = ""))
+    }
     
-    chart <- ggplotly(chart) %>% layout(theme = theme_minimal())
     chart
   })
+  
+  output$trackChart <- renderPlotly({
+    
+    race_results <- laps_ds %>% 
+      inner_join(pilots_ds, by = "driverId") %>% 
+      inner_join(races_ds, by = "raceId") %>% 
+      filter(year==input$season) %>% 
+      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
+      select(gp=name, round, fullname, lap, position, milliseconds) %>% 
+      mutate(position = factor(position, levels = c(as.character(1:20)))) %>% 
+      mutate(pretty_format = sprintf("%d:%02d.%03d",
+                                     floor(milliseconds / 60000),
+                                     floor((milliseconds %% 60000) / 1000),
+                                     milliseconds %% 1000)) %>% 
+      filter(gp==input$track) %>% 
+      filter(fullname == input$pilot1 | fullname == input$pilot2)
+    
+    if(input$var == "Position"){
+      
+      chart <- plot_ly(race_results, x = ~lap, y = ~position, color = ~fullname, type = "scatter", mode = "lines", 
+                       line = list(width = 1.5)) %>%
+        layout(title = paste(input$track, " ", input$season ),
+               xaxis = list(title = "Laps"),
+               yaxis = list(title = "", autorange = "reversed"))
+      
+      
+      chart
+    }
+    else{
+      chart <- plot_ly(race_results, x = ~lap, y = ~pretty_format, color = ~fullname, type = "scatter", mode = "lines", 
+                       line = list(width = 1.5)) %>%
+        layout(title = paste(input$track, " ", input$season ),
+               xaxis = list(title = "Laps"),
+               yaxis = list(title = ""))
+      
+      
+      chart
+    }
+  })
+  
   
 }
 
