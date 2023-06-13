@@ -3,7 +3,6 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
   
   titlePanel("F1 pilots comparison"),
@@ -18,7 +17,7 @@ ui <- fluidPage(
                   choices = NULL),
       selectInput("pilot2",
                   "Second pilot:",
-                  choices = NULL),
+                  choices = NULL)
     ),
     
     mainPanel(
@@ -29,7 +28,6 @@ ui <- fluidPage(
         ),
         tabPanel("Races",
                  div(style = "margin-top: 1rem;",
-                     
                      fluidRow(
                        column(width = 3,
                               selectInput("track",
@@ -40,23 +38,51 @@ ui <- fluidPage(
                                           "Parameter",
                                           choices = c("Position", "Lap Time"),
                                           selected = "Position")),
-                     ), 
+                       column(width = 3,
+                              selectInput("tab2ChartType",
+                                          "Chart Type",
+                                          choices = c("Line Chart", "Parallel Coordinates"),
+                                          selected = "Line Chart")),
+                       div(style = "margin-top: 2rem;",                       
+                           column(width = 3,
+                                  checkboxInput("tab2ShowAll",
+                                                "Show Others",
+                                                value = FALSE)
+                           )
+                       )
+                     ),
                      plotlyOutput("circuitChart", height = "70rem")
                  )
         ),
         tabPanel("Season standings",
-                 div(
-                   style = "margin-top: 1rem;",
-                   selectInput("season_stats",
-                               "Season standings:",
-                               choices = c("Position", "Points")),
-                   plotlyOutput("seasonChart", height = "70rem")
-                 )
+                 div(style = "margin-top: 1rem;",
+                     fluidRow(
+                       column(width = 3,
+                              selectInput("season_stats",
+                                          "Season standings:",
+                                          choices = c("Position", "Points"))),
+
+                       column(width = 3,
+                              selectInput("tab3ChartType",
+                                          "Chart Type",
+                                          choices = c("Line Chart", "Parallel Coordinates"),
+                                          selected = "Line Chart")),
+                       div(style = "margin-top: 2rem;",                       
+                           column(width = 3,
+                                  checkboxInput("tab3ShowAll",
+                                                "Show Others",
+                                                value = FALSE)
+                           )
+                       )
+                     )
+                 ),
+                 plotlyOutput("seasonChart", height = "70rem")
         )
       )  
     )
   )
 )
+
 
 server <- function(input, output, session) {
   seasons_ds <- readr::read_csv("data/seasons.csv")
@@ -190,12 +216,13 @@ server <- function(input, output, session) {
       filter(fullname == input$pilot1 | fullname == input$pilot2)
     
     if(input$season_stats=="Position") {
+      
       season_results <-  season_results %>% select(name, fullname, position) %>%
-        mutate(position = ifelse(position == "\\N", "DNF", position)) %>%
-        mutate(position = factor(position, levels = c(as.character(1:20), "DNF"))) %>% 
-        mutate(name = factor(name, levels = unique(name)))
+      mutate(position = ifelse(position == "\\N", "DNF", position)) %>%
+      mutate(position = factor(position, levels = c(as.character(1:20), "DNF"))) %>% 
+      mutate(name = factor(name, levels = unique(name)))
       
-      
+      if(input$tab3ChartType == "Line Chart"){
       chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter",
                        colors = "Set1", mode = "lines", 
                        line = list(width = 1.5)) %>%
@@ -203,8 +230,12 @@ server <- function(input, output, session) {
                xaxis = list(title = ""),
                yaxis = list(title = "", autorange = "reversed"),
                showlegend = TRUE)
+      }
+      else{
+      }
     }
     else {
+      if(input$tab3ChartType == "Line Chart"){
       season_results <-  season_results %>%  select(name, fullname, points) %>%
         mutate(name = factor(name, levels = unique(name))) %>% 
         group_by(fullname) %>%
@@ -217,6 +248,10 @@ server <- function(input, output, session) {
                xaxis = list(title = ""),
                yaxis = list(title = ""),
                showlegend = TRUE)
+      }
+      else{
+        
+      }
     }
     
     chart
