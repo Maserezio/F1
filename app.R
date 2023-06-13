@@ -11,7 +11,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(  
       selectInput("season",
-                  "Season:",
+                  "Season:", 
                   choices = NULL),
       selectInput("pilot1",
                   "First pilot:",
@@ -24,7 +24,9 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("General Comparison",
-                 plotlyOutput("gencomp")),
+                 div(style = "margin-top: 1rem;",
+                     plotlyOutput("gencomp", height = "70rem"))
+        ),
         tabPanel("Races",
                  div(style = "margin-top: 1rem;",
                      
@@ -33,13 +35,13 @@ ui <- fluidPage(
                               selectInput("track",
                                           "Grand Prix",
                                           choices = NULL)),
-                       column(width = 6,
+                       column(width = 3,
                               selectInput("var",
                                           "Parameter",
                                           choices = c("Position", "Lap Time"),
-                                          selected = "Position"))
+                                          selected = "Position")),
                      ), 
-                     plotlyOutput("trackChart", height = "70rem")
+                     plotlyOutput("circuitChart", height = "70rem")
                  )
         ),
         tabPanel("Season standings",
@@ -48,7 +50,7 @@ ui <- fluidPage(
                    selectInput("season_stats",
                                "Season standings:",
                                choices = c("Position", "Points")),
-                   plotlyOutput("lineChart", height = "70rem")
+                   plotlyOutput("seasonChart", height = "70rem")
                  )
         )
       )  
@@ -64,24 +66,24 @@ server <- function(input, output, session) {
   laps_ds <- readr::read_csv("data/lap_times.csv")
   
   
-  
-  observe({  
+  observe({
     seasons_distinct <- distinct(seasons_ds, year) %>%
       arrange(desc(year)) %>%
       slice(-1)
     
     updateSelectInput(session, "season", choices = seasons_distinct$year)
+  })
+  
+  observeEvent(input$season, {
     
-    season_races <- races %>% 
+    season_races <- races_ds %>% 
       filter(year == input$season) %>% 
       arrange(round) %>% 
       select(name) %>% 
       distinct()
     
     updateSelectInput(session, "track", choices = season_races$name)
-  })
-  
-  observeEvent(input$season, {
+    
     pilots_distinct <- pilots_ds %>%
       inner_join(results_ds, by = "driverId") %>%
       inner_join(races_ds, by = "raceId") %>%
@@ -96,21 +98,96 @@ server <- function(input, output, session) {
     random_pilot2 <- shuffled_pilots[2]
     
     updateSelectInput(session, "pilot1", choices = pilots_distinct$fullname, selected = random_pilot1)
-    updateSelectInput(session, "pilot2", choices = pilots_distinct$fullname, selected = random_pilot2)
-    
-  })
-  output$gencomp <- renderPlotly({
-    
+    updateSelectInput(session, "pilot2", choices = pilots_distinct$fullname, selected = random_pilot2)    
   })
   
-  output$lineChart <- renderPlotly({
+  output$gencomp <- renderPlotly({
+    pilots_standings <- results_ds %>%
+      inner_join(pilots_ds, by = "driverId") %>%
+      inner_join(races_ds, by = "raceId") %>%
+      filter(year == input$season) %>%
+      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
+      group_by(fullname) %>% 
+      mutate(wins = sum(position == 1)) %>% 
+      mutate(poles = sum(grid == 1)) %>%
+      mutate(fastestLaps = sum(rank == 1)) %>%
+      mutate(podiums = sum(position == 1 | position == 2 | position == 3)) %>% 
+      mutate(dnfs = sum(position == "\\N")) %>%
+      mutate(pts = round(sum(points)/n_distinct(raceId), 1)) %>%
+      filter(fullname == input$pilot1 | fullname == input$pilot2) %>% 
+      select(fullname, wins, poles, pts, fastestLaps, podiums, dnfs) %>% 
+      distinct
+    
+    trace1 <- list(
+      name = pilots_standings[2,]$fullname,
+      type = "bar", 
+      x = c(pilots_standings[2,]$wins, pilots_standings[2,]$poles,
+            pilots_standings[2,]$fastestLaps, pilots_standings[2,]$pts,
+            pilots_standings[2,]$podiums, pilots_standings[2,]$dnfs), 
+      y = c("Wins", "Poles", "Fastest Laps", "Avg. Points", "Podiums", "DNF"),
+      marker = list(color = "lightblue"),  
+      orientation = "h"
+    )
+    trace2 <- list(
+      name = pilots_standings[1,]$fullname,
+      type = "bar", 
+      x = c(pilots_standings[1,]$wins, pilots_standings[1,]$poles,
+            pilots_standings[1,]$fastestLaps, pilots_standings[1,]$pts,
+            pilots_standings[1,]$podiums, pilots_standings[1,]$dnfs), 
+      y = c("Wins", "Poles", "Fastest Laps", "Avg. Points", "Podiums", "DNF"),
+      marker = list(color = "red"),
+      xaxis = "x2", 
+      yaxis = "y2", 
+      orientation = "h"
+    )
+    layout <- list(
+      title = paste(input$pilot1, "vs", input$pilot2, input$season), 
+      xaxis = list(
+        type = "linear", 
+        range = c(22, 0), 
+        domain = c(0, 0.5), 
+        showticklabels = FALSE
+      ), 
+      yaxis = list(
+        type = "category", 
+        autorange = TRUE
+      ), 
+      xaxis2 = list(
+        type = "linear", 
+        range = c(0, 22), 
+        anchor = "y2", 
+        domain = c(0.5, 1), 
+        showticklabels = FALSE
+      ), 
+      yaxis2 = list(
+        type = "category", 
+        anchor = "x2", 
+        domain = c(0, 1), 
+        autorange = TRUE, 
+        showticklabels = FALSE
+      ), 
+      autosize = TRUE, 
+      showlegend = TRUE
+    )
+    p <- plot_ly()
+    p <- add_trace(p, uid=trace1$uid, type=trace1$type, x=trace1$x, y=trace1$y,
+                   orientation=trace1$orientation, marker = trace1$marker, name = trace1$name)
+    p <- add_trace(p, uid=trace2$uid, type=trace2$type, x=trace2$x, y=trace2$y, xaxis=trace2$xaxis,
+                   yaxis=trace2$yaxis, marker = trace2$marker, name = trace2$name, orientation=trace2$orientation)
+    p <- layout(p, title=layout$title, width=layout$width, xaxis=layout$xaxis, yaxis=layout$yaxis,
+                height=layout$height, xaxis2=layout$xaxis2, yaxis2=layout$yaxis2, autosize=layout$autosize,
+                showlegend=layout$showlegend)
+    p
+  })
+  
+  output$seasonChart <- renderPlotly({
     season_results <- results_ds %>% 
       inner_join(races_ds, by = "raceId") %>%
       inner_join(pilots_ds, by = "driverId") %>% 
       filter(year == input$season) %>%
       mutate(fullname = paste(forename, surname, sep = " ")) %>% 
       arrange(date) %>%
-      filter(fullname == input$pilot1 | fullname == input$pilot2 )
+      filter(fullname == input$pilot1 | fullname == input$pilot2)
     
     if(input$season_stats=="Position") {
       season_results <-  season_results %>% select(name, fullname, position) %>%
@@ -119,11 +196,13 @@ server <- function(input, output, session) {
         mutate(name = factor(name, levels = unique(name)))
       
       
-      chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter", mode = "lines", 
-                       line = list(width = 3)) %>%
+      chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter",
+                       colors = "Set1", mode = "lines", 
+                       line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Positions"),
                xaxis = list(title = ""),
-               yaxis = list(title = "", autorange = "reversed"))
+               yaxis = list(title = "", autorange = "reversed"),
+               showlegend = TRUE)
     }
     else {
       season_results <-  season_results %>%  select(name, fullname, points) %>%
@@ -131,17 +210,19 @@ server <- function(input, output, session) {
         group_by(fullname) %>%
         mutate(points = cumsum(points)) 
       
-      chart <- plot_ly(season_results, x = ~name, y = ~points, color = ~fullname, type = "scatter", mode = "lines", 
-                       line = list(width = 3)) %>%
+      chart <- plot_ly(season_results, x = ~name, y = ~points, color = ~fullname, type = "scatter",
+                       colors = "Set1", mode = "lines", 
+                       line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Standings"),
                xaxis = list(title = ""),
-               yaxis = list(title = ""))
+               yaxis = list(title = ""),
+               showlegend = TRUE)
     }
     
     chart
   })
   
-  output$trackChart <- renderPlotly({
+  output$circuitChart <- renderPlotly({
     
     race_results <- laps_ds %>% 
       inner_join(pilots_ds, by = "driverId") %>% 
@@ -159,21 +240,25 @@ server <- function(input, output, session) {
     
     if(input$var == "Position"){
       
-      chart <- plot_ly(race_results, x = ~lap, y = ~position, color = ~fullname, type = "scatter", mode = "lines", 
+      chart <- plot_ly(race_results, x = ~lap, y = ~position, color = ~fullname, colors = "Set1",
+                       type = "scatter", mode = "lines", 
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$track, " ", input$season ),
                xaxis = list(title = "Laps"),
-               yaxis = list(title = "", autorange = "reversed"))
+               yaxis = list(title = "", autorange = "reversed"),
+               showlegend = TRUE)
       
       
       chart
     }
     else{
-      chart <- plot_ly(race_results, x = ~lap, y = ~pretty_format, color = ~fullname, type = "scatter", mode = "lines", 
+      chart <- plot_ly(race_results, x = ~lap, y = ~pretty_format, color = ~fullname, colors = "Set1",
+                       type = "scatter", mode = "lines", 
                        line = list(width = 1.5)) %>%
-        layout(title = paste(input$track, " ", input$season ),
+        layout(title = paste(input$track, input$season ),
                xaxis = list(title = "Laps"),
-               yaxis = list(title = ""))
+               yaxis = list(title = "", autorange = "reversed"),
+               showlegend = TRUE)
       
       
       chart
