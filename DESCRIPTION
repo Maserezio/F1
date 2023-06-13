@@ -1,0 +1,11 @@
+Package: F1
+Title: F1 Pilots Comparison
+Version: 0.1.0
+Authors@R: person("Artur", "Ohanian", email = "art.oganyan04@gmai.com", role = c("aut"))
+Description: F1 pilots statistics comparison dashboard
+License: MIT
+Imports:
+  shiny,
+  dplyr,
+  ggplot2,
+  plotly
