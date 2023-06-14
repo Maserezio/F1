@@ -1,62 +1,110 @@
-install.packages(c("shiny", "dplyr", "ggplot2", "plotly"))
-
 library(shiny)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(leaflet)
+library(shinydashboard)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
-  titlePanel("F1 pilots comparison"),
-  
-  sidebarLayout(
-    sidebarPanel(  
-      selectInput("season",
-                  "Season:", 
-                  choices = NULL),
-      selectInput("pilot1",
-                  "First pilot:",
-                  choices = NULL),
-      selectInput("pilot2",
-                  "Second pilot:",
-                  choices = NULL),
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("General Comparison",
-                 div(style = "margin-top: 1rem;",
-                     plotlyOutput("gencomp", height = "70rem"))
-        ),
-        tabPanel("Races",
-                 div(style = "margin-top: 1rem;",
-                     
-                     fluidRow(
-                       column(width = 3,
-                              selectInput("track",
-                                          "Grand Prix",
-                                          choices = NULL)),
-                       column(width = 3,
-                              selectInput("var",
-                                          "Parameter",
-                                          choices = c("Position", "Lap Time"),
-                                          selected = "Position")),
-                     ), 
-                     plotlyOutput("circuitChart", height = "70rem")
+  dashboardPage( skin = "red",
+                 dashboardHeader(title = "F1 pilots comparison"),
+                 dashboardSidebar( width = 180,
+                                   sidebarMenu(style = "position: fixed; width:180px;",
+                                               menuItem("General Comparison", icon = icon("medal"), tabName = "GeneralComparison"),
+                                               menuItem("Season standings", icon = icon("flag-checkered"), tabName = "Seasonstandings"),
+                                               menuItem("Races", icon = icon("rocket"), tabName = "Races"),
+                                               menuItem("Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy"),
+                                               selectInput("season",
+                                                           "Season:", 
+                                                           choices = NULL),
+                                               selectInput("pilot1",
+                                                           "First pilot:",
+                                                           choices = NULL),
+                                               selectInput("pilot2",
+                                                           "Second pilot:",
+                                                           choices = NULL)
+                                   )
+                 ),
+                 dashboardBody(
+                   tabItems (
+                     tabItem(tabName = "GeneralComparison",
+                             h2("General Comparison of Pilots"),
+                             h4("The graph shows the comparison of the chosen pilots in terms of their performance during the season."),
+                             
+                             div(style = "margin-top: 1rem;",
+                                 fluidRow(
+                                   
+                                   box(
+                                     title = "Performance Metrics for Pilot Comparison", status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE,
+                                     plotlyOutput("gencomp", height = "60rem"), width = 12)
+                                 ))
+                     ),
+                     tabItem(tabName = "Races",
+                             h2("Results of the Races"),
+                             h4("The graph shows the comparison of the chosen metric between two pilots for a chosen race."),
+                             div(style = "margin-top: 1rem;",
+                                 
+                                 fluidRow(
+                                   
+                                   box(
+                                     title = "Grand Prix", background = "black", solidHeader = TRUE,
+                                     selectInput("track",
+                                                 "Select Gran Prix here",
+                                                 choices = NULL)
+                                   ),
+                                   box(
+                                     title = "Inputs", background = "black", solidHeader = TRUE,
+                                     selectInput("var",
+                                                 "Select Parameter here",
+                                                 choices = c("Position", "Lap Time"),
+                                                 selected = "Position")
+                                   ),
+                                   box(
+                                     title = "Refrormance During the Race", status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE,
+                                     plotlyOutput("circuitChart"), width = 12
+                                   ),
+                                 )
+                             ),
+                     ),
+                     tabItem(tabName = "Seasonstandings",
+                             h2("Performance during the season"),
+                             h4("The graph shows the comparison of the chosen metric between two pilots for a chosen season."),
+                             div(
+                               style = "margin-top: 1rem;",
+                               fluidRow(
+                                 
+                                 box(
+                                   title = "Season standings", background = "black", solidHeader = TRUE,
+                                   selectInput("season_stats",
+                                               "Select metric here",
+                                               choices = c("Position", "Points"))),
+                                 
+                                 box(
+                                   title = "Refrormance During the Race", status = "danger", solidHeader = TRUE,
+                                   collapsible = TRUE,
+                                   plotlyOutput("seasonChart"), width = 12
+                                 ),
+                               ))
+                     ),
+                     tabItem(tabName = "RacesGeograpy",
+                             h2("Geography of the races during the season"),
+                             h4("This graph showcases the Formula 1 tracks where the selected pilots competed during the season"),
+                             div(style = "margin-top: 1rem;",
+                                 fluidRow(
+                                   box(
+                                     title = "Geography of the races within one season", status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE,
+                                     leafletOutput("geograpyChart", height = "60rem" ), width = 12
+                                   ),
+                                 ))
+                     )
+                   )  
                  )
-        ),
-        tabPanel("Season standings",
-                 div(
-                   style = "margin-top: 1rem;",
-                   selectInput("season_stats",
-                               "Season standings:",
-                               choices = c("Position", "Points")),
-                   plotlyOutput("seasonChart", height = "70rem")
-                 )
-        )
-      )  
-    )
+                 
   )
 )
 
@@ -66,7 +114,7 @@ server <- function(input, output, session) {
   results_ds <- readr::read_csv("data/results.csv")
   races_ds <- readr::read_csv("data/races.csv")
   laps_ds <- readr::read_csv("data/lap_times.csv")
-  
+  circuit_ds <- readr::read_csv("data/circuits.csv")
   
   observe({
     seasons_distinct <- distinct(seasons_ds, year) %>%
@@ -173,13 +221,15 @@ server <- function(input, output, session) {
     )
     p <- plot_ly()
     p <- add_trace(p, uid=trace1$uid, type=trace1$type, x=trace1$x, y=trace1$y,
-                   orientation=trace1$orientation, marker = trace1$marker, name = trace1$name)
+                   orientation=trace1$orientation, marker = trace1$marker, name = trace1$name, text = trace1$x)
     p <- add_trace(p, uid=trace2$uid, type=trace2$type, x=trace2$x, y=trace2$y, xaxis=trace2$xaxis,
-                   yaxis=trace2$yaxis, marker = trace2$marker, name = trace2$name, orientation=trace2$orientation)
+                   yaxis=trace2$yaxis, marker = trace2$marker, name = trace2$name, orientation=trace2$orientation, text = trace2$x )
     p <- layout(p, title=layout$title, width=layout$width, xaxis=layout$xaxis, yaxis=layout$yaxis,
                 height=layout$height, xaxis2=layout$xaxis2, yaxis2=layout$yaxis2, autosize=layout$autosize,
                 showlegend=layout$showlegend)
-    p
+    
+    
+    
   })
   
   output$seasonChart <- renderPlotly({
@@ -202,8 +252,8 @@ server <- function(input, output, session) {
                        colors = "Set1", mode = "lines", 
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Positions"),
-               xaxis = list(title = ""),
-               yaxis = list(title = "", autorange = "reversed"),
+               xaxis = list(title = "Race"),
+               yaxis = list(title = "Position", autorange = "reversed"),
                showlegend = TRUE)
     }
     else {
@@ -216,8 +266,8 @@ server <- function(input, output, session) {
                        colors = "Set1", mode = "lines", 
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Standings"),
-               xaxis = list(title = ""),
-               yaxis = list(title = ""),
+               xaxis = list(title = "Race"),
+               yaxis = list(title = "Points"),
                showlegend = TRUE)
     }
     
@@ -247,7 +297,7 @@ server <- function(input, output, session) {
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$track, " ", input$season ),
                xaxis = list(title = "Laps"),
-               yaxis = list(title = "", autorange = "reversed"),
+               yaxis = list(title = "Position", autorange = "reversed"),
                showlegend = TRUE)
       
       
@@ -259,13 +309,48 @@ server <- function(input, output, session) {
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$track, input$season ),
                xaxis = list(title = "Laps"),
-               yaxis = list(title = "", autorange = "reversed"),
+               yaxis = list(title = "Lap time", autorange = "reversed"),
                showlegend = TRUE)
       
       
       chart
     }
   })
+  
+  #Make map here
+  output$geograpyChart <- renderLeaflet({
+    
+    race_locations_2 <- unique(laps_ds[, c("raceId", "driverId")]) %>% 
+      inner_join(pilots_ds, by = "driverId") %>% 
+      inner_join(races_ds, by = "raceId") %>% 
+      inner_join(circuit_ds, by = "circuitId") %>% 
+      filter(year==input$season) %>% 
+      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
+      select(fullname, lat, lng, name.y, country, year) %>% 
+      filter(fullname == input$pilot1 | fullname == input$pilot2 )
+    
+    
+    # Filter the data and select relevant columns
+    filtered_data <- race_locations_2 %>%
+      select(lat, lng, name.y)
+    
+    # Create a leaflet map
+    map <- leaflet(filtered_data) %>%
+      addTiles() %>%
+      setView(lng = 0, lat = 0, zoom = 2)  # Set initial view of the map
+    
+    # Add markers for each track
+    map <- map %>%
+      addMarkers(
+        lng = ~lng,
+        lat = ~lat,
+        popup = ~name.y
+      )
+    
+    map
+    
+  })
+  
   
   
 }
