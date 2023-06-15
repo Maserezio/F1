@@ -4,6 +4,7 @@ library(ggplot2)
 library(plotly)
 library(leaflet)
 library(shinydashboard)
+library(rvest)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -17,7 +18,7 @@ ui <- fluidPage(
                                                menuItem("Races", icon = icon("rocket"), tabName = "Races"),
                                                menuItem("Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy"),
                                                selectInput("season",
-                                                           "Season:", 
+                                                           "Season:",
                                                            choices = NULL),
                                                selectInput("pilot1",
                                                            "First pilot:",
@@ -35,6 +36,25 @@ ui <- fluidPage(
                              
                              div(style = "margin-top: 1rem;",
                                  fluidRow(
+                                   
+                                   
+                                   box(
+                                     title = textOutput("inputValue2"), status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE,
+                                     uiOutput("image2"),
+                                     htmlOutput("inputValue2Name"),
+                                     htmlOutput("inputValue2Code"),
+                                     htmlOutput("inputValue2DOB"),
+                                     htmlOutput("inputValue2Nationality")),
+                                   
+                                   box(
+                                     title = textOutput("inputValue1"), status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE,
+                                     uiOutput("image1"),
+                                     htmlOutput("inputValue1Name"),
+                                     htmlOutput("inputValue1Code"),
+                                     htmlOutput("inputValue1DOB"),
+                                     htmlOutput("inputValue1Nationality")),
                                    
                                    box(
                                      title = "Performance Metrics for Pilot Comparison", status = "danger", solidHeader = TRUE,
@@ -102,7 +122,7 @@ ui <- fluidPage(
                                    ),
                                  ))
                      )
-                   )  
+                   )
                  )
                  
   )
@@ -126,10 +146,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$season, {
     
-    season_races <- races_ds %>% 
-      filter(year == input$season) %>% 
-      arrange(round) %>% 
-      select(name) %>% 
+    season_races <- races_ds %>%
+      filter(year == input$season) %>%
+      arrange(round) %>%
+      select(name) %>%
       distinct()
     
     updateSelectInput(session, "track", choices = season_races$name)
@@ -138,9 +158,9 @@ server <- function(input, output, session) {
       inner_join(results_ds, by = "driverId") %>%
       inner_join(races_ds, by = "raceId") %>%
       filter(year == input$season) %>%
-      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
-      distinct() %>% 
-      arrange(fullname)    
+      mutate(fullname = paste(forename, surname, sep = " ")) %>%
+      distinct() %>%
+      arrange(fullname)
     
     shuffled_pilots <- sample(pilots_distinct$fullname)
     
@@ -148,7 +168,7 @@ server <- function(input, output, session) {
     random_pilot2 <- shuffled_pilots[2]
     
     updateSelectInput(session, "pilot1", choices = pilots_distinct$fullname, selected = random_pilot1)
-    updateSelectInput(session, "pilot2", choices = pilots_distinct$fullname, selected = random_pilot2)    
+    updateSelectInput(session, "pilot2", choices = pilots_distinct$fullname, selected = random_pilot2)
   })
   
   output$gencomp <- renderPlotly({
@@ -156,67 +176,67 @@ server <- function(input, output, session) {
       inner_join(pilots_ds, by = "driverId") %>%
       inner_join(races_ds, by = "raceId") %>%
       filter(year == input$season) %>%
-      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
-      group_by(fullname) %>% 
-      mutate(wins = sum(position == 1)) %>% 
+      mutate(fullname = paste(forename, surname, sep = " ")) %>%
+      group_by(fullname) %>%
+      mutate(wins = sum(position == 1)) %>%
       mutate(poles = sum(grid == 1)) %>%
       mutate(fastestLaps = sum(rank == 1)) %>%
-      mutate(podiums = sum(position == 1 | position == 2 | position == 3)) %>% 
+      mutate(podiums = sum(position == 1 | position == 2 | position == 3)) %>%
       mutate(dnfs = sum(position == "\\N")) %>%
       mutate(pts = round(sum(points)/n_distinct(raceId), 1)) %>%
-      filter(fullname == input$pilot1 | fullname == input$pilot2) %>% 
-      select(fullname, wins, poles, pts, fastestLaps, podiums, dnfs) %>% 
+      filter(fullname == input$pilot1 | fullname == input$pilot2) %>%
+      select(fullname, wins, poles, pts, fastestLaps, podiums, dnfs) %>%
       distinct
     
     trace1 <- list(
       name = pilots_standings[2,]$fullname,
-      type = "bar", 
+      type = "bar",
       x = c(pilots_standings[2,]$wins, pilots_standings[2,]$poles,
             pilots_standings[2,]$fastestLaps, pilots_standings[2,]$pts,
-            pilots_standings[2,]$podiums, pilots_standings[2,]$dnfs), 
+            pilots_standings[2,]$podiums, pilots_standings[2,]$dnfs),
       y = c("Wins", "Poles", "Fastest Laps", "Avg. Points", "Podiums", "DNF"),
-      marker = list(color = "lightblue"),  
+      marker = list(color = "lightblue"),
       orientation = "h"
     )
     trace2 <- list(
       name = pilots_standings[1,]$fullname,
-      type = "bar", 
+      type = "bar",
       x = c(pilots_standings[1,]$wins, pilots_standings[1,]$poles,
             pilots_standings[1,]$fastestLaps, pilots_standings[1,]$pts,
-            pilots_standings[1,]$podiums, pilots_standings[1,]$dnfs), 
+            pilots_standings[1,]$podiums, pilots_standings[1,]$dnfs),
       y = c("Wins", "Poles", "Fastest Laps", "Avg. Points", "Podiums", "DNF"),
       marker = list(color = "red"),
-      xaxis = "x2", 
-      yaxis = "y2", 
+      xaxis = "x2",
+      yaxis = "y2",
       orientation = "h"
     )
     layout <- list(
-      title = paste(input$pilot1, "vs", input$pilot2, input$season), 
+      title = paste(input$pilot1, "vs", input$pilot2, input$season),
       xaxis = list(
-        type = "linear", 
-        range = c(22, 0), 
-        domain = c(0, 0.5), 
+        type = "linear",
+        range = c(22, 0),
+        domain = c(0, 0.5),
         showticklabels = FALSE
-      ), 
+      ),
       yaxis = list(
-        type = "category", 
+        type = "category",
         autorange = TRUE
-      ), 
+      ),
       xaxis2 = list(
-        type = "linear", 
-        range = c(0, 22), 
-        anchor = "y2", 
-        domain = c(0.5, 1), 
+        type = "linear",
+        range = c(0, 22),
+        anchor = "y2",
+        domain = c(0.5, 1),
         showticklabels = FALSE
-      ), 
+      ),
       yaxis2 = list(
-        type = "category", 
-        anchor = "x2", 
-        domain = c(0, 1), 
-        autorange = TRUE, 
+        type = "category",
+        anchor = "x2",
+        domain = c(0, 1),
+        autorange = TRUE,
         showticklabels = FALSE
-      ), 
-      autosize = TRUE, 
+      ),
+      autosize = TRUE,
       showlegend = TRUE
     )
     p <- plot_ly()
@@ -228,28 +248,77 @@ server <- function(input, output, session) {
                 height=layout$height, xaxis2=layout$xaxis2, yaxis2=layout$yaxis2, autosize=layout$autosize,
                 showlegend=layout$showlegend)
     
-    
+   
     
   })
   
+  output$image1 <- renderUI({
+    
+    page_link <- pilots_info %>% filter(fullname == input$pilot1) %>% pull(url)
+    page <- read_html(page_link)
+    
+    image_url <- page %>%
+      html_nodes("div#mw-content-text img") %>%
+      html_attr("src") %>%
+      .[1]
+    
+    tags$img(src = image_url, width = "300px")
+  })
+  
+  output$image2 <- renderUI({
+    
+    page_link <- pilots_info %>% filter(fullname == input$pilot2) %>% pull(url)
+    page <- read_html(page_link)
+    
+    image_url <- page %>%
+      html_nodes("div#mw-content-text img") %>%
+      html_attr("src") %>%
+      .[1]
+    
+    tags$img(src = image_url, width = "300px")
+  })
+  
+  
+  output$inputValue1 <- renderText({ paste("Pilot 1: ", input$pilot1) })
+  output$inputValue2 <- renderText({ paste("Pilot 2: ", input$pilot2) })
+  
+  
+  pilots_info <- pilots_ds %>%
+    mutate(fullname = paste(forename, surname, sep = " ")) %>%
+    mutate(dob = format(dob, "%Y-%m-%d")) %>%
+    arrange(fullname)
+
+  
+  output$inputValue1Name <- renderText({ paste("<b>Full Name: </b>", input$pilot1) })
+  output$inputValue1Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(code)) })
+  output$inputValue1DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(dob)) })
+  output$inputValue1Nationality <- renderText({ paste("<b>Nationality: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(nationality)) })
+ 
+  output$inputValue2Name <- renderText({ paste("<b>Full Name: </b>", input$pilot2) })
+  output$inputValue2Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(code)) })
+  output$inputValue2DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(dob)) })
+  output$inputValue2Nationality <- renderText({ paste("<b>Nationality: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(nationality)) })
+  
+  
+  
   output$seasonChart <- renderPlotly({
-    season_results <- results_ds %>% 
+    season_results <- results_ds %>%
       inner_join(races_ds, by = "raceId") %>%
-      inner_join(pilots_ds, by = "driverId") %>% 
+      inner_join(pilots_ds, by = "driverId") %>%
       filter(year == input$season) %>%
-      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
+      mutate(fullname = paste(forename, surname, sep = " ")) %>%
       arrange(date) %>%
       filter(fullname == input$pilot1 | fullname == input$pilot2)
     
     if(input$season_stats=="Position") {
       season_results <-  season_results %>% select(name, fullname, position) %>%
         mutate(position = ifelse(position == "\\N", "DNF", position)) %>%
-        mutate(position = factor(position, levels = c(as.character(1:20), "DNF"))) %>% 
+        mutate(position = factor(position, levels = c(as.character(1:20), "DNF"))) %>%
         mutate(name = factor(name, levels = unique(name)))
       
       
       chart <- plot_ly(season_results, x = ~name, y = ~position, color = ~fullname, type = "scatter",
-                       colors = "Set1", mode = "lines", 
+                       colors = "Set1", mode = "lines",
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Positions"),
                xaxis = list(title = "Race"),
@@ -258,12 +327,12 @@ server <- function(input, output, session) {
     }
     else {
       season_results <-  season_results %>%  select(name, fullname, points) %>%
-        mutate(name = factor(name, levels = unique(name))) %>% 
+        mutate(name = factor(name, levels = unique(name))) %>%
         group_by(fullname) %>%
-        mutate(points = cumsum(points)) 
+        mutate(points = cumsum(points))
       
       chart <- plot_ly(season_results, x = ~name, y = ~points, color = ~fullname, type = "scatter",
-                       colors = "Set1", mode = "lines", 
+                       colors = "Set1", mode = "lines",
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$season, "Pilot Standings"),
                xaxis = list(title = "Race"),
@@ -276,24 +345,24 @@ server <- function(input, output, session) {
   
   output$circuitChart <- renderPlotly({
     
-    race_results <- laps_ds %>% 
-      inner_join(pilots_ds, by = "driverId") %>% 
-      inner_join(races_ds, by = "raceId") %>% 
-      filter(year==input$season) %>% 
-      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
-      select(gp=name, round, fullname, lap, position, milliseconds) %>% 
-      mutate(position = factor(position, levels = c(as.character(1:20)))) %>% 
+    race_results <- laps_ds %>%
+      inner_join(pilots_ds, by = "driverId") %>%
+      inner_join(races_ds, by = "raceId") %>%
+      filter(year==input$season) %>%
+      mutate(fullname = paste(forename, surname, sep = " ")) %>%
+      select(gp=name, round, fullname, lap, position, milliseconds) %>%
+      mutate(position = factor(position, levels = c(as.character(1:20)))) %>%
       mutate(pretty_format = sprintf("%d:%02d.%03d",
                                      floor(milliseconds / 60000),
                                      floor((milliseconds %% 60000) / 1000),
-                                     milliseconds %% 1000)) %>% 
-      filter(gp==input$track) %>% 
+                                     milliseconds %% 1000)) %>%
+      filter(gp==input$track) %>%
       filter(fullname == input$pilot1 | fullname == input$pilot2)
     
     if(input$var == "Position"){
       
       chart <- plot_ly(race_results, x = ~lap, y = ~position, color = ~fullname, colors = "Set1",
-                       type = "scatter", mode = "lines", 
+                       type = "scatter", mode = "lines",
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$track, " ", input$season ),
                xaxis = list(title = "Laps"),
@@ -305,7 +374,7 @@ server <- function(input, output, session) {
     }
     else{
       chart <- plot_ly(race_results, x = ~lap, y = ~pretty_format, color = ~fullname, colors = "Set1",
-                       type = "scatter", mode = "lines", 
+                       type = "scatter", mode = "lines",
                        line = list(width = 1.5)) %>%
         layout(title = paste(input$track, input$season ),
                xaxis = list(title = "Laps"),
@@ -320,13 +389,13 @@ server <- function(input, output, session) {
   #Make map here
   output$geograpyChart <- renderLeaflet({
     
-    race_locations_2 <- unique(laps_ds[, c("raceId", "driverId")]) %>% 
-      inner_join(pilots_ds, by = "driverId") %>% 
-      inner_join(races_ds, by = "raceId") %>% 
-      inner_join(circuit_ds, by = "circuitId") %>% 
-      filter(year==input$season) %>% 
-      mutate(fullname = paste(forename, surname, sep = " ")) %>% 
-      select(fullname, lat, lng, name.y, country, year) %>% 
+    race_locations_2 <- unique(laps_ds[, c("raceId", "driverId")]) %>%
+      inner_join(pilots_ds, by = "driverId") %>%
+      inner_join(races_ds, by = "raceId") %>%
+      inner_join(circuit_ds, by = "circuitId") %>%
+      filter(year==input$season) %>%
+      mutate(fullname = paste(forename, surname, sep = " ")) %>%
+      select(fullname, lat, lng, name.y, country, year) %>%
       filter(fullname == input$pilot1 | fullname == input$pilot2 )
     
     
