@@ -1,5 +1,10 @@
+install.packages(c("shiny", "dplyr", "tidyr", "readr", "ggplot2", "plotly", "leaflet", "shinydashboard", "rvest"))
+
+
 library(shiny)
 library(dplyr)
+library(tidyr)
+library(readr)
 library(ggplot2)
 library(plotly)
 library(leaflet)
@@ -11,6 +16,7 @@ ui <- fluidPage(
   
   dashboardPage( skin = "red",
                  dashboardHeader(title = "F1 pilots comparison"),
+<<<<<<< Updated upstream
                  dashboardSidebar( width = 180,
                                    sidebarMenu(style = "position: fixed; width:180px;",
                                                menuItem("General Comparison", icon = icon("medal"), tabName = "GeneralComparison"),
@@ -27,6 +33,25 @@ ui <- fluidPage(
                                                            "Second pilot:",
                                                            choices = NULL)
                                    )
+=======
+                 dashboardSidebar(sidebarMenu(menuItem(" General Comparison", tabName = "GeneralComparison"),
+                                              menuItem(" Season standings", tabName = "Seasonstandings"),
+                                              menuItem(" Races", tabName = "Races"),
+                                              menuItem(" Races Geograpy", tabName = "RacesGeograpy"),
+                                              div(style = "width: 22rem",
+                                                  selectInput("season",
+                                                              "Season:",
+                                                              choices = NULL),
+                                                  selectInput("pilot1",
+                                                              "First pilot:",
+                                                              choices = NULL),
+                                                  selectInput("pilot2",
+                                                              "Second pilot:",
+                                                              choices = NULL)
+                                              ) 
+                                              
+                 )
+>>>>>>> Stashed changes
                  ),
                  dashboardBody(
                    tabItems (
@@ -248,7 +273,11 @@ server <- function(input, output, session) {
                 height=layout$height, xaxis2=layout$xaxis2, yaxis2=layout$yaxis2, autosize=layout$autosize,
                 showlegend=layout$showlegend)
     
+<<<<<<< Updated upstream
    
+=======
+    
+>>>>>>> Stashed changes
     
   })
   
@@ -287,13 +316,21 @@ server <- function(input, output, session) {
     mutate(fullname = paste(forename, surname, sep = " ")) %>%
     mutate(dob = format(dob, "%Y-%m-%d")) %>%
     arrange(fullname)
+<<<<<<< Updated upstream
 
+=======
+  
+>>>>>>> Stashed changes
   
   output$inputValue1Name <- renderText({ paste("<b>Full Name: </b>", input$pilot1) })
   output$inputValue1Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(code)) })
   output$inputValue1DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(dob)) })
   output$inputValue1Nationality <- renderText({ paste("<b>Nationality: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(nationality)) })
+<<<<<<< Updated upstream
  
+=======
+  
+>>>>>>> Stashed changes
   output$inputValue2Name <- renderText({ paste("<b>Full Name: </b>", input$pilot2) })
   output$inputValue2Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(code)) })
   output$inputValue2DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(dob)) })
