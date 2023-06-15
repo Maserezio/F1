@@ -1,2 +1,2 @@
-# F1
-F1 pilots dashboard
+# F1 pilot comparison dashboard
+
