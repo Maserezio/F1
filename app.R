@@ -11,22 +11,23 @@ ui <- fluidPage(
   
   dashboardPage( skin = "red",
                  dashboardHeader(title = "F1 pilots comparison"),
-                 dashboardSidebar( width = 180,
-                                   sidebarMenu(style = "position: fixed; width:180px;",
-                                               menuItem("General Comparison", icon = icon("medal"), tabName = "GeneralComparison"),
-                                               menuItem("Season standings", icon = icon("flag-checkered"), tabName = "Seasonstandings"),
-                                               menuItem("Races", icon = icon("rocket"), tabName = "Races"),
-                                               menuItem("Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy"),
-                                               selectInput("season",
-                                                           "Season:",
-                                                           choices = NULL),
-                                               selectInput("pilot1",
-                                                           "First pilot:",
-                                                           choices = NULL),
-                                               selectInput("pilot2",
-                                                           "Second pilot:",
-                                                           choices = NULL)
-                                   )
+                 dashboardSidebar(sidebarMenu(menuItem(" General Comparison", icon = icon("medal"), tabName = "GeneralComparison"),
+                                              menuItem(" Season standings", icon = icon("flag-checkered"), tabName = "Seasonstandings"),
+                                              menuItem(" Races", icon = icon("rocket"), tabName = "Races"),
+                                              menuItem(" Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy"),
+                                              div(style = "width: 22rem",
+                                                  selectInput("season",
+                                                              "Season:",
+                                                              choices = NULL),
+                                                  selectInput("pilot1",
+                                                              "First pilot:",
+                                                              choices = NULL),
+                                                  selectInput("pilot2",
+                                                              "Second pilot:",
+                                                              choices = NULL)
+                                              ) 
+                                              
+                 )
                  ),
                  dashboardBody(
                    tabItems (
@@ -248,7 +249,7 @@ server <- function(input, output, session) {
                 height=layout$height, xaxis2=layout$xaxis2, yaxis2=layout$yaxis2, autosize=layout$autosize,
                 showlegend=layout$showlegend)
     
-   
+    
     
   })
   
@@ -287,13 +288,13 @@ server <- function(input, output, session) {
     mutate(fullname = paste(forename, surname, sep = " ")) %>%
     mutate(dob = format(dob, "%Y-%m-%d")) %>%
     arrange(fullname)
-
+  
   
   output$inputValue1Name <- renderText({ paste("<b>Full Name: </b>", input$pilot1) })
   output$inputValue1Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(code)) })
   output$inputValue1DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(dob)) })
   output$inputValue1Nationality <- renderText({ paste("<b>Nationality: </b>", pilots_info %>% filter(fullname == input$pilot1) %>% select(nationality)) })
- 
+  
   output$inputValue2Name <- renderText({ paste("<b>Full Name: </b>", input$pilot2) })
   output$inputValue2Code <- renderText({ paste("<b>Code: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(code)) })
   output$inputValue2DOB <- renderText({ paste("<b>DOB: </b>", pilots_info %>% filter(fullname == input$pilot2) %>% select(dob)) })
