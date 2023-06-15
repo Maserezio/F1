@@ -8,4 +8,7 @@ Imports:
   shiny,
   dplyr,
   ggplot2,
-  plotly
+  plotly,
+  leaflet,
+  rvest,
+  shinydashboard
