@@ -1,9 +1,6 @@
 library(shiny)
-<<<<<<< Updated upstream
-=======
 library(tidyr)
 library(readr)
->>>>>>> Stashed changes
 library(dplyr)
 library(ggplot2)
 library(plotly)
