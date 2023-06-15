@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 my_packages = c("shiny", "dplyr", "ggplot2", "plotly", "leaflet", "shinydashboard", "rvest")
+=======
+my_packages = c("shiny", "tidyr", "readr", "dplyr", "ggplot2", "plotly", "leaflet", "shinydashboard", "rvest")
+>>>>>>> Stashed changes
 
 install_if_missing = function(p) {
   if (p %in% rownames(installed.packages()) == FALSE) {
