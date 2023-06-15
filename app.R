@@ -6,7 +6,6 @@ library(leaflet)
 library(shinydashboard)
 library(rvest)
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
   
   dashboardPage( skin = "red",
