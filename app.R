@@ -1,6 +1,4 @@
 library(shiny)
-library(tidyr)
-library(readr)
 library(dplyr)
 library(ggplot2)
 library(plotly)
@@ -12,46 +10,70 @@ ui <- fluidPage(
   
   dashboardPage( skin = "red",
                  dashboardHeader(title = "F1 pilots comparison"),
-                 dashboardSidebar(sidebarMenu(menuItem(" General Comparison", icon = icon("medal"), tabName = "GeneralComparison"),
-                                              menuItem(" Season standings", icon = icon("flag-checkered"), tabName = "Seasonstandings"),
-                                              menuItem(" Races", icon = icon("rocket"), tabName = "Races"),
-                                              menuItem(" Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy"),
-                                              div(style = "width: 22rem",
-                                                  selectInput("season",
-                                                              "Season:",
-                                                              choices = NULL),
-                                                  selectInput("pilot1",
-                                                              "First pilot:",
-                                                              choices = NULL),
-                                                  selectInput("pilot2",
-                                                              "Second pilot:",
-                                                              choices = NULL)
-                                              ) 
+                 dashboardSidebar(
+                   sidebarMenu(
+                     menuItem(" Drivers", icon = icon("medal"), tabName = "Drivers"),
+                     menuItem(" Teams", icon = icon("flag-checkered"), tabName = "Teams"),
+                     menuItem(" Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy") 
                                               
                  )
                  ),
                  dashboardBody(
+                   tags$head(
+                     tags$style(HTML("
+                     .content-wrapper {
+                      background-color: white !important;
+                     }
+                     .custom-tab-title {
+                     font-weight: bold;
+                     }
+                     
+                    .nav-tabs-custom .nav-tabs li.active:hover a, .nav-tabs-custom .nav-tabs li.active a {
+                    background-color: transparent;
+                    border-color: transparent;
+                    }
+                    
+                    .nav-tabs-custom .nav-tabs li.active {
+                        border-top-color: red;
+                    }
+                    
+                    "
+                     ))),
                    tabItems (
-                     tabItem(tabName = "GeneralComparison",
-                             h2("General Comparison of Pilots"),
-                             h4("The graph shows the comparison of the chosen pilots in terms of their performance during the season."),
+                     tabItem(tabName = "Drivers",
+                             h2("General information about pilots performance within one season"),
+                             h4("Select all necessary inputs"),
                              
-                             div(style = "margin-top: 1rem;",
+                             div(#style = "margin-top: 1rem;",
                                  fluidRow(
-                                   
-                                   
-                                   box(
-                                     title = textOutput("inputValue2"), status = "danger", solidHeader = TRUE,
-                                     collapsible = TRUE,
-                                     uiOutput("image2"),
-                                     htmlOutput("inputValue2Name"),
-                                     htmlOutput("inputValue2Code"),
-                                     htmlOutput("inputValue2DOB"),
-                                     htmlOutput("inputValue2Nationality")),
-                                   
+                                     box(
+                                       background = "black", width = 3, height = "8rem",
+                                       selectInput("pilot1",
+                                                   "Select First Pilot:",
+                                                   choices = NULL)
+                                     ),
+                                     box(
+                                       background = "black", width = 3, height = "8rem",
+                                       selectInput("pilot2",
+                                                   "Select Second Pilot:",
+                                                   choices = NULL)
+                                     ),
+                                     box(
+                                       background = "black", width = 3, height = "8rem",
+                                       selectInput("season",
+                                                   "Select Season:",
+                                                   choices = NULL)
+                                     ),
+                                 ),
+                                 fluidRow(
+                                   style = "display: flex; 
+                                            flex-wrap: wrap;",
+                 
                                    box(
                                      title = textOutput("inputValue1"), status = "danger", solidHeader = TRUE,
-                                     collapsible = TRUE,
+                                     collapsible = TRUE, 
+                                     width = 3,
+                                     height = "46rem",
                                      uiOutput("image1"),
                                      htmlOutput("inputValue1Name"),
                                      htmlOutput("inputValue1Code"),
@@ -59,62 +81,50 @@ ui <- fluidPage(
                                      htmlOutput("inputValue1Nationality")),
                                    
                                    box(
-                                     title = "Performance Metrics for Pilot Comparison", status = "danger", solidHeader = TRUE,
-                                     collapsible = TRUE,
-                                     plotlyOutput("gencomp", height = "60rem"), width = 12)
-                                 ))
-                     ),
-                     tabItem(tabName = "Races",
-                             h2("Results of the Races"),
-                             h4("The graph shows the comparison of the chosen metric between two pilots for a chosen race."),
-                             div(style = "margin-top: 1rem;",
-                                 
-                                 fluidRow(
+                                     title = textOutput("inputValue2"), status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE, 
+                                     width = 3,
+                                     height =  "46rem",
+                                     uiOutput("image2"),
+                                     htmlOutput("inputValue2Name"),
+                                     htmlOutput("inputValue2Code"),
+                                     htmlOutput("inputValue2DOB"),
+                                     htmlOutput("inputValue2Nationality")),
                                    
                                    box(
-                                     title = "Grand Prix", background = "black", solidHeader = TRUE,
-                                     selectInput("track",
-                                                 "Select Gran Prix here",
-                                                 choices = NULL)
-                                   ),
-                                   box(
-                                     title = "Inputs", background = "black", solidHeader = TRUE,
-                                     selectInput("var",
-                                                 "Select Parameter here",
-                                                 choices = c("Position", "Lap Time"),
-                                                 selected = "Position")
-                                   ),
-                                   box(
-                                     title = "Refrormance During the Race", status = "danger", solidHeader = TRUE,
-                                     collapsible = TRUE,
-                                     plotlyOutput("circuitChart"), width = 12
-                                   ),
-                                 )
-                             ),
-                     ),
-                     tabItem(tabName = "Seasonstandings",
-                             h2("Performance during the season"),
-                             h4("The graph shows the comparison of the chosen metric between two pilots for a chosen season."),
-                             div(
-                               style = "margin-top: 1rem;",
-                               fluidRow(
-                                 
-                                 box(
-                                   title = "Season standings", background = "black", solidHeader = TRUE,
-                                   selectInput("season_stats",
-                                               "Select metric here",
-                                               choices = c("Position", "Points"))),
-                                 
-                                 box(
-                                   title = "Refrormance During the Race", status = "danger", solidHeader = TRUE,
-                                   collapsible = TRUE,
-                                   plotlyOutput("seasonChart"), width = 12
-                                 ),
-                               ))
-                     ),
+                                     title = "Geberal Metrics for Pilot Comparison", status = "danger", solidHeader = TRUE,
+                                     collapsible = TRUE, 
+                                     width = 6, 
+                                     height = "46rem",
+                                     plotlyOutput("gencomp")),
+
+                                   tabBox(
+                                     title = "Comparison of pilots during the season",
+                                     id = "tabset1", height = "70rem", width = 12,
+                                     tabPanel(tags$b("Seasonal Standings"), 
+                                              h4("Pilots standings during all races of the season"),
+                                             selectInput("season_stats",
+                                                         "Select metric here",
+                                                         choices = c("Position", "Points")),
+                                                         plotlyOutput("seasonChart")),
+                                     tabPanel(tags$b("Race Standings"), 
+                                              h4("Pilots standings during the chosen race of the season"),
+                                              selectInput("track",
+                                                          "Select Gran Prix here",
+                                                           choices = NULL),
+                                              selectInput("var",
+                                                         "Select parameter here",
+                                                         choices = c("Position", "Lap Time"),
+                                                         selected = "Position"),
+                                                         plotlyOutput("circuitChart")
+                                              ))))),
+                      tabItem(tabName = "Teams",
+                              h2("Results of the Races"),
+                              h4("The graph shows the comparison of the chosen metric between two pilots for a chosen race."),
+                    ),
                      tabItem(tabName = "RacesGeograpy",
                              h2("Geography of the races during the season"),
-                             h4("This graph showcases the Formula 1 tracks where the selected pilots competed during the season"),
+                             h4("This graph showcases the Formula 1 tracks where the selected pilots or teams competed during the season"),
                              div(style = "margin-top: 1rem;",
                                  fluidRow(
                                    box(
@@ -122,11 +132,11 @@ ui <- fluidPage(
                                      collapsible = TRUE,
                                      leafletOutput("geograpyChart", height = "60rem" ), width = 12
                                    ),
-                                 ))
-                     )
-                   )
-                 )
-                 
+           )
+          )
+        )
+      )
+    )
   )
 )
 
@@ -264,7 +274,7 @@ server <- function(input, output, session) {
       html_attr("src") %>%
       .[1]
     
-    tags$img(src = image_url, width = "300px")
+    tags$img(src = image_url, height = "300px")
   })
   
   output$image2 <- renderUI({
@@ -277,7 +287,7 @@ server <- function(input, output, session) {
       html_attr("src") %>%
       .[1]
     
-    tags$img(src = image_url, width = "300px")
+    tags$img(src = image_url, height = "300px")
   })
   
   
