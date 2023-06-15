@@ -5,6 +5,7 @@ library(plotly)
 
 ui <- fluidPage(
   
+<<<<<<< Updated upstream
   titlePanel("F1 pilots comparison"),
   
   sidebarLayout(
@@ -52,6 +53,26 @@ ui <- fluidPage(
                        )
                      ),
                      plotlyOutput("circuitChart", height = "70rem")
+=======
+  dashboardPage( skin = "red",
+                 dashboardHeader(title = "F1 pilots comparison"),
+                 dashboardSidebar(sidebarMenu(menuItem(" General Comparison", tabName = "GeneralComparison"),
+                                              menuItem(" Season standings", tabName = "Seasonstandings"),
+                                              menuItem(" Races", tabName = "Races"),
+                                              menuItem(" Races Geograpy", tabName = "RacesGeograpy"),
+                                              div(style = "width: 22rem",
+                                                  selectInput("season",
+                                                              "Season:",
+                                                              choices = NULL),
+                                                  selectInput("pilot1",
+                                                              "First pilot:",
+                                                              choices = NULL),
+                                                  selectInput("pilot2",
+                                                              "Second pilot:",
+                                                              choices = NULL)
+                                              ) 
+                                              
+>>>>>>> Stashed changes
                  )
         ),
         tabPanel("Season standings",
