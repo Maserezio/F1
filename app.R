@@ -1,3 +1,5 @@
+#Final without teams
+
 library(shiny)
 library(dplyr)
 library(ggplot2)
@@ -13,7 +15,6 @@ ui <- fluidPage(
                  dashboardSidebar(
                    sidebarMenu(
                      menuItem(" Drivers", icon = icon("medal"), tabName = "Drivers"),
-                     menuItem(" Teams", icon = icon("flag-checkered"), tabName = "Teams"),
                      menuItem(" Races Geograpy", icon = icon("location-dot"), tabName = "RacesGeograpy") 
                      
                    )
@@ -41,7 +42,7 @@ ui <- fluidPage(
                      ))),
                    tabItems (
                      tabItem(tabName = "Drivers",
-                             h2("General information about pilots performance within one season"),
+                             h2("General information about performance of the pilots within one season"),
                              h4("Select all necessary inputs"),
                              
                              div(#style = "margin-top: 1rem;",
@@ -92,7 +93,7 @@ ui <- fluidPage(
                                    htmlOutput("inputValue2Nationality")),
                                  
                                  box(
-                                   title = "Geberal Metrics for Pilot Comparison", status = "danger", solidHeader = TRUE,
+                                   title = "General Metrics for Pilots Comparison", status = "danger", solidHeader = TRUE,
                                    collapsible = TRUE, 
                                    width = 6, 
                                    height = "46rem",
@@ -128,10 +129,6 @@ ui <- fluidPage(
                                      plotlyOutput("circuitChart")
                                    )
                                  )))),
-                     tabItem(tabName = "Teams",
-                             h2("Results of the Races"),
-                             h4("The graph shows the comparison of the chosen metric between two pilots for a chosen race."),
-                     ),
                      tabItem(tabName = "RacesGeograpy",
                              h2("Geography of the races during the season"),
                              h4("This graph showcases the Formula 1 tracks where the selected pilots or teams competed during the season"),
